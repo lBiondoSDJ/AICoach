@@ -69,6 +69,7 @@ export function confirmAISelection() {
     }
 }
 
+// MODIFICATO: rimosso 'richiedeNotaAllegato' dai parametri
 export function createCard(titolo, descrizione, promptTemplate, categoria, labelTesto, placeholderText, labelLang, labelCharacters, index, callbacks) {
     const card = document.createElement("div");
     card.className = "prompt-card";
@@ -97,18 +98,15 @@ export function createCard(titolo, descrizione, promptTemplate, categoria, label
     const descElement = document.createElement("p");
     descElement.textContent = descrizione;
 
-    // --- Definizione degli input (li definiamo fuori dai condizionali per poterli usare nel generatePromptButton) ---
     let esperienzaInput;
     let genereInput;
     let testataInput;
     let areaTextInput;
     let langSelect;
     let charactersInput;
-    let dettagliInput;
+    // MODIFICATO: rimosso 'dettagliInput' perché non più utilizzato
+    // let dettagliInput;
 
-    // --- Inizializzazione input se i placeholder sono presenti nel promptTemplate ---
-
-    // [ESPERIENZA]
     if (promptTemplate.includes("[ESPERIENZA]")) {
         const esperienzaLabel = document.createElement("label");
         esperienzaLabel.textContent = "Tema o campo di esperienza principale:";
@@ -119,7 +117,6 @@ export function createCard(titolo, descrizione, promptTemplate, categoria, label
         cardContent.appendChild(esperienzaInput);
     }
 
-    // [GENERE]
     if (promptTemplate.includes("[GENERE]")) {
         const genereLabel = document.createElement("label");
         genereLabel.textContent = "Genere di giornalismo:";
@@ -130,7 +127,6 @@ export function createCard(titolo, descrizione, promptTemplate, categoria, label
         cardContent.appendChild(genereInput);
     }
 
-    // [TESTATA]
     if (promptTemplate.includes("[TESTATA]")) {
         const testataLabel = document.createElement("label");
         testataLabel.textContent = "Nome della testata:";
@@ -141,7 +137,6 @@ export function createCard(titolo, descrizione, promptTemplate, categoria, label
         cardContent.appendChild(testataInput);
     }
 
-    // [AREA_TEXT]
     if (promptTemplate.includes("[AREA_TEXT]")) {
         const testoLabel = document.createElement("label");
         areaTextInput = document.createElement("textarea");
@@ -153,7 +148,6 @@ export function createCard(titolo, descrizione, promptTemplate, categoria, label
         cardContent.appendChild(areaTextInput);
     }
 
-    // [LANG]
     if (promptTemplate.includes("[LANG]")) {
         const langLabel = document.createElement("label");
         langLabel.textContent = typeof labelLang === 'string' && labelLang.trim() !== '' ? labelLang : "Lingua di destinazione:";
@@ -179,7 +173,6 @@ export function createCard(titolo, descrizione, promptTemplate, categoria, label
         cardContent.appendChild(langSelect);
     }
 
-    // [CHARACTERS]
     if (promptTemplate.includes("[CHARACTERS]")) {
         const charactersLabel = document.createElement("label");
         charactersLabel.textContent = typeof labelCharacters === 'string' && labelCharacters.trim() !== '' ? labelCharacters : "Numero di battute desiderate:";
@@ -191,7 +184,8 @@ export function createCard(titolo, descrizione, promptTemplate, categoria, label
         cardContent.appendChild(charactersInput);
     }
 
-    // [DETTAGLI] e nota generica
+    // MODIFICATO: Rimosso il blocco per [DETTAGLI]
+    /*
     if (promptTemplate.includes("[DETTAGLI]")) {
         const dettagliLabel = document.createElement("label");
         dettagliLabel.textContent = "Altri dettagli (se presenti nel prompt originale):";
@@ -201,16 +195,17 @@ export function createCard(titolo, descrizione, promptTemplate, categoria, label
         cardContent.appendChild(dettagliLabel);
         cardContent.appendChild(dettagliInput);
     }
+    */
 
-    // Nota generica per prompt che probabilmente richiedono contesto esterno (se contengono AREA_TEXT o DETTAGLI)
+    // MODIFICATO: Rimosso il blocco per la nota generica
+    /*
     if (promptTemplate.includes("[AREA_TEXT]") || promptTemplate.includes("[DETTAGLI]")) {
         const note = document.createElement("p");
         note.className = "note";
         note.textContent = "Ricorda: Per questo prompt, dovrai fornire il testo/file da elaborare alla tua IA di fiducia insieme al prompt generato.";
         cardContent.appendChild(note);
     }
-
-    // --- Output e Bottoni (rimangono invariati nella loro posizione) ---
+    */
 
     const output = document.createElement("div");
     output.className = "prompt-output";
@@ -235,12 +230,13 @@ export function createCard(titolo, descrizione, promptTemplate, categoria, label
     generatePromptButton.className = "generate-prompt-button";
     generatePromptButton.onclick = () => {
         const inputs = {
-            esperienza: esperienzaInput ? esperienzaInput.value : '', // Controlla se l'input esiste prima di prendere il valore
+            esperienza: esperienzaInput ? esperienzaInput.value : '',
             genere: genereInput ? genereInput.value : '',
             testata: testataInput ? testataInput.value : '',
             areaText: areaTextInput ? areaTextInput.value : '',
             lang: langSelect ? langSelect.value : '',
-            dettagli: dettagliInput ? dettagliInput.value : '',
+            // MODIFICATO: rimosso 'dettagli' dall'oggetto inputs
+            // dettagli: dettagliInput ? dettagliInput.value : '',
             characters: charactersInput ? charactersInput.value : ''
         };
         callbacks.onGeneratePrompt(promptTemplate, inputs, output);
@@ -355,7 +351,10 @@ export function renderCards(prompts, filterCategoria = "", searchTerm = "") {
         UI_ELEMENTS.promptContainer.innerHTML = '<p style="text-align: center; color: #666; font-style: italic; margin-top: 3rem;">Nessun prompt trovato con i criteri di ricerca selezionati.</p>';
     } else {
         filteredPrompts.forEach((row, i) => {
+            // MODIFICATO: rimosso 'richiedeNotaAllegato' dalla destrutturazione della riga
             const [titolo, descrizione, promptTemplate, categoria, labelTesto, placeholderText, labelLang, labelCharacters] = row;
+
+            // MODIFICATO: rimosso 'isNotaAllegatoRequired' dalla chiamata a createCard
             const card = createCard(titolo, descrizione, promptTemplate, categoria, labelTesto, placeholderText, labelLang, labelCharacters, i, {
                 onGeneratePrompt: (template, inputs, outputElement) => {
                     let finalPrompt = template
@@ -369,9 +368,10 @@ export function renderCards(prompts, filterCategoria = "", searchTerm = "") {
                     if (template.includes("[LANG]")) {
                         finalPrompt = finalPrompt.replace(/\[LANG\]/g, inputs.lang || "");
                     }
-                    if (template.includes("[DETTAGLI]")) {
-                        finalPrompt = finalPrompt.replace(/\[DETTAGLI\]/g, inputs.dettagli || "");
-                    }
+                    // MODIFICATO: rimosso la sostituzione per [DETTAGLI]
+                    // if (template.includes("[DETTAGLI]")) {
+                    //     finalPrompt = finalPrompt.replace(/\[DETTAGLI\]/g, inputs.dettagli || "");
+                    // }
                     if (template.includes("[CHARACTERS]")) {
                         finalPrompt = finalPrompt.replace(/\[CHARACTERS\]/g, inputs.characters || "");
                     }
