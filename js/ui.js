@@ -1,7 +1,7 @@
 // js/ui.js
 
 import { UI_ELEMENTS, GLOBAL_STATE, AI_OPTIONS } from './constants.js';
-import { callGeminiAPI } from './api.js'; // Importa callGeminiAPI direttamente
+import { callGeminiAPI } from './api.js';
 
 // Funzioni per il modale di conferma copia
 export function showCustomModal(title, content) {
@@ -18,7 +18,7 @@ export function hideCustomModal() {
 export function showAISelectionModal() {
     // Popola il dropdown con le opzioni AI (se non già fatto)
     if (UI_ELEMENTS.aiSelectionDropdown.options.length === 0 || UI_ELEMENTS.aiSelectionDropdown.options.length !== AI_OPTIONS.length) {
-        UI_ELEMENTS.aiSelectionDropdown.innerHTML = ''; // Pulisci prima
+        UI_ELEMENTS.aiSelectionDropdown.innerHTML = '';
         AI_OPTIONS.forEach(ai => {
             const option = document.createElement("option");
             option.value = ai.url;
@@ -61,14 +61,13 @@ export function confirmAISelection() {
             document.execCommand("copy");
             document.body.removeChild(tempTextarea);
             hideAISelectionModal();
-            showCustomModal("Copia & Vai", "Il contenuto è stato copiato negli appunti. Ora puoi incollarlo nella nuova scheda AI.");
-        }, 500); // Piccolo ritardo per assicurare l'apertura della nuova finestra
+            showCustomModal("Copia & Vai", "Il contenuto è stato coperto negli appunti. Ora puoi incollarlo nella nuova scheda AI.");
+        }, 500);
     } else {
         hideAISelectionModal();
         showCustomModal("Errore", "Impossibile aprire una nuova scheda. Assicurati di non avere un blocco popup attivo.");
     }
 }
-
 
 export function createCard(titolo, descrizione, promptTemplate, categoria, labelTesto, placeholderText, labelLang, labelCharacters, index, callbacks) {
     const card = document.createElement("div");
@@ -98,23 +97,120 @@ export function createCard(titolo, descrizione, promptTemplate, categoria, label
     const descElement = document.createElement("p");
     descElement.textContent = descrizione;
 
-    const esperienzaLabel = document.createElement("label");
-    esperienzaLabel.textContent = "Tema o campo di esperienza principale:";
-    const esperienzaInput = document.createElement("input");
-    esperienzaInput.placeholder = "es. economia, esteri, politica...";
-    esperienzaInput.id = `esperienza-${index}`;
+    // --- Definizione degli input (li definiamo fuori dai condizionali per poterli usare nel generatePromptButton) ---
+    let esperienzaInput;
+    let genereInput;
+    let testataInput;
+    let areaTextInput;
+    let langSelect;
+    let charactersInput;
+    let dettagliInput;
 
-    const genereLabel = document.createElement("label");
-    genereLabel.textContent = "Genere di giornalismo:";
-    const genereInput = document.createElement("input");
-    genereInput.placeholder = "es. cronaca, cultura, sport...";
-    genereInput.id = `genere-${index}`;
+    // --- Inizializzazione input se i placeholder sono presenti nel promptTemplate ---
 
-    const testataLabel = document.createElement("label");
-    testataLabel.textContent = "Nome della testata:";
-    const testataInput = document.createElement("input");
-    testataInput.placeholder = "es. Il Sole 24 Ore, La Repubblica...";
-    testataInput.id = `testata-${index}`;
+    // [ESPERIENZA]
+    if (promptTemplate.includes("[ESPERIENZA]")) {
+        const esperienzaLabel = document.createElement("label");
+        esperienzaLabel.textContent = "Tema o campo di esperienza principale:";
+        esperienzaInput = document.createElement("input");
+        esperienzaInput.placeholder = "es. economia, esteri, politica...";
+        esperienzaInput.id = `esperienza-${index}`;
+        cardContent.appendChild(esperienzaLabel);
+        cardContent.appendChild(esperienzaInput);
+    }
+
+    // [GENERE]
+    if (promptTemplate.includes("[GENERE]")) {
+        const genereLabel = document.createElement("label");
+        genereLabel.textContent = "Genere di giornalismo:";
+        genereInput = document.createElement("input");
+        genereInput.placeholder = "es. cronaca, cultura, sport...";
+        genereInput.id = `genere-${index}`;
+        cardContent.appendChild(genereLabel);
+        cardContent.appendChild(genereInput);
+    }
+
+    // [TESTATA]
+    if (promptTemplate.includes("[TESTATA]")) {
+        const testataLabel = document.createElement("label");
+        testataLabel.textContent = "Nome della testata:";
+        testataInput = document.createElement("input");
+        testataInput.placeholder = "es. Il Sole 24 Ore, La Repubblica...";
+        testataInput.id = `testata-${index}`;
+        cardContent.appendChild(testataLabel);
+        cardContent.appendChild(testataInput);
+    }
+
+    // [AREA_TEXT]
+    if (promptTemplate.includes("[AREA_TEXT]")) {
+        const testoLabel = document.createElement("label");
+        areaTextInput = document.createElement("textarea");
+        areaTextInput.rows = 4;
+        areaTextInput.id = `area-text-${index}`;
+        testoLabel.textContent = typeof labelTesto === 'string' && labelTesto.trim() !== '' ? labelTesto : "Incolla qui il testo da elaborare:";
+        areaTextInput.placeholder = typeof placeholderText === 'string' && placeholderText.trim() !== '' ? placeholderText : "Incolla qui il testo...";
+        cardContent.appendChild(testoLabel);
+        cardContent.appendChild(areaTextInput);
+    }
+
+    // [LANG]
+    if (promptTemplate.includes("[LANG]")) {
+        const langLabel = document.createElement("label");
+        langLabel.textContent = typeof labelLang === 'string' && labelLang.trim() !== '' ? labelLang : "Lingua di destinazione:";
+        langSelect = document.createElement("select");
+        langSelect.id = `lang-${index}`;
+
+        const lingue = [
+            "Italiano", "Inglese USA", "Inglese UK", "Afrikaans", "Arabo", "Bengali", "Cinese",
+            "Danese", "Ebraico", "Finlandese", "Francese", "Giapponese", "Hindi", "Indonesiano",
+            "Olandese", "Persiano", "Polacco", "Portoghese", "Russo", "Spagnolo", "Svedese",
+            "Thai", "Turco", "Vietnamita"
+        ];
+        const sortedOtherLanguages = lingue.filter(lang => !["Italiano", "Inglese USA", "Inglese UK"].includes(lang)).sort();
+        const orderedLanguages = ["Italiano", "Inglese USA", "Inglese UK", ...sortedOtherLanguages];
+
+        orderedLanguages.forEach(lingua => {
+            const option = document.createElement("option");
+            option.value = lingua;
+            option.textContent = lingua;
+            langSelect.appendChild(option);
+        });
+        cardContent.appendChild(langLabel);
+        cardContent.appendChild(langSelect);
+    }
+
+    // [CHARACTERS]
+    if (promptTemplate.includes("[CHARACTERS]")) {
+        const charactersLabel = document.createElement("label");
+        charactersLabel.textContent = typeof labelCharacters === 'string' && labelCharacters.trim() !== '' ? labelCharacters : "Numero di battute desiderate:";
+        charactersInput = document.createElement("input");
+        charactersInput.type = "number";
+        charactersInput.placeholder = "es. 500";
+        charactersInput.id = `characters-${index}`;
+        cardContent.appendChild(charactersLabel);
+        cardContent.appendChild(charactersInput);
+    }
+
+    // [DETTAGLI] e nota generica
+    if (promptTemplate.includes("[DETTAGLI]")) {
+        const dettagliLabel = document.createElement("label");
+        dettagliLabel.textContent = "Altri dettagli (se presenti nel prompt originale):";
+        dettagliInput = document.createElement("input");
+        dettagliInput.placeholder = "aggiungere qui personalizzazioni per lo specifico caso/documento";
+        dettagliInput.id = `dettagli-${index}`;
+        cardContent.appendChild(dettagliLabel);
+        cardContent.appendChild(dettagliInput);
+    }
+
+    // Nota generica per prompt che probabilmente richiedono contesto esterno (se contengono AREA_TEXT o DETTAGLI)
+    if (promptTemplate.includes("[AREA_TEXT]") || promptTemplate.includes("[DETTAGLI]")) {
+        const note = document.createElement("p");
+        note.className = "note";
+        note.textContent = "Ricorda: Per questo prompt, dovrai fornire il testo/file da elaborare alla tua IA di fiducia insieme al prompt generato.";
+        cardContent.appendChild(note);
+    }
+
+    // --- Output e Bottoni (rimangono invariati nella loro posizione) ---
 
     const output = document.createElement("div");
     output.className = "prompt-output";
@@ -139,13 +235,13 @@ export function createCard(titolo, descrizione, promptTemplate, categoria, label
     generatePromptButton.className = "generate-prompt-button";
     generatePromptButton.onclick = () => {
         const inputs = {
-            esperienza: esperienzaInput.value,
-            genere: genereInput.value,
-            testata: testataInput.value,
-            areaText: cardContent.querySelector(`#area-text-${index}`)?.value,
-            lang: cardContent.querySelector(`#lang-${index}`)?.value,
-            dettagli: cardContent.querySelector(`#dettagli-${index}`)?.value,
-            characters: cardContent.querySelector(`#characters-${index}`)?.value
+            esperienza: esperienzaInput ? esperienzaInput.value : '', // Controlla se l'input esiste prima di prendere il valore
+            genere: genereInput ? genereInput.value : '',
+            testata: testataInput ? testataInput.value : '',
+            areaText: areaTextInput ? areaTextInput.value : '',
+            lang: langSelect ? langSelect.value : '',
+            dettagli: dettagliInput ? dettagliInput.value : '',
+            characters: charactersInput ? charactersInput.value : ''
         };
         callbacks.onGeneratePrompt(promptTemplate, inputs, output);
     };
@@ -184,86 +280,6 @@ export function createCard(titolo, descrizione, promptTemplate, categoria, label
     resetButton.onclick = () => {
         callbacks.onResetOutput(output);
     };
-
-    cardContent.appendChild(descElement);
-    cardContent.appendChild(esperienzaLabel);
-    cardContent.appendChild(esperienzaInput);
-    cardContent.appendChild(genereLabel);
-    cardContent.appendChild(genereInput);
-    cardContent.appendChild(testataLabel);
-    cardContent.appendChild(testataInput);
-
-    // LOGICA AGGIORNATA: I campi vengono visualizzati solo se il loro placeholder è presente nel promptTemplate
-    if (promptTemplate.includes("[AREA_TEXT]")) {
-        const testoLabel = document.createElement("label");
-        const testoInput = document.createElement("textarea");
-        testoInput.rows = 4;
-        testoInput.id = `area-text-${index}`;
-        testoLabel.textContent = typeof labelTesto === 'string' && labelTesto.trim() !== '' ? labelTesto : "Incolla qui il testo da elaborare:";
-        testoInput.placeholder = typeof placeholderText === 'string' && placeholderText.trim() !== '' ? placeholderText : "Incolla qui il testo...";
-        cardContent.appendChild(testoLabel);
-        cardContent.appendChild(testoInput);
-    }
-
-    if (promptTemplate.includes("[LANG]")) {
-        const langLabel = document.createElement("label");
-        langLabel.textContent = typeof labelLang === 'string' && labelLang.trim() !== '' ? labelLang : "Lingua di destinazione:";
-        const langSelect = document.createElement("select");
-        langSelect.id = `lang-${index}`;
-
-        const lingue = [
-            "Italiano",
-            "Inglese USA",
-            "Inglese UK",
-            "Afrikaans", "Arabo", "Bengali", "Cinese", "Danese", "Ebraico", "Finlandese",
-            "Francese", "Giapponese", "Hindi", "Indonesiano", "Olandese", "Persiano",
-            "Polacco", "Portoghese", "Russo", "Spagnolo", "Svedese", "Thai", "Turco", "Vietnamita"
-        ];
-        const sortedOtherLanguages = lingue.filter(lang => !["Italiano", "Inglese USA", "Inglese UK"].includes(lang)).sort();
-        const orderedLanguages = ["Italiano", "Inglese USA", "Inglese UK", ...sortedOtherLanguages];
-
-        orderedLanguages.forEach(lingua => {
-            const option = document.createElement("option");
-            option.value = lingua;
-            option.textContent = lingua;
-            langSelect.appendChild(option);
-        });
-        cardContent.appendChild(langLabel);
-        cardContent.appendChild(langSelect);
-    }
-
-    // LOGICA AGGIORNATA: Il campo CHARACTERS viene visualizzato se il placeholder è presente nel template
-    if (promptTemplate.includes("[CHARACTERS]")) {
-        const charactersLabel = document.createElement("label");
-        charactersLabel.textContent = typeof labelCharacters === 'string' && labelCharacters.trim() !== '' ? labelCharacters : "Numero di battute desiderate:";
-        const charactersInput = document.createElement("input");
-        charactersInput.type = "number";
-        charactersInput.placeholder = "es. 500";
-        charactersInput.id = `characters-${index}`;
-        cardContent.appendChild(charactersLabel);
-        cardContent.appendChild(charactersInput);
-    }
-
-    // LOGICA AGGIORNATA: Se il prompt template include [DETTAGLI], mostriamo il campo e la nota generica.
-    if (promptTemplate.includes("[DETTAGLI]")) {
-        const dettagliLabel = document.createElement("label");
-        dettagliLabel.textContent = "Altri dettagli (se presenti nel prompt originale):";
-        const dettagliInput = document.createElement("input");
-        dettagliInput.placeholder = "aggiungere qui personalizzazioni per lo specifico caso/documento";
-        dettagliInput.id = `dettagli-${index}`;
-        cardContent.appendChild(dettagliLabel);
-        cardContent.appendChild(dettagliInput);
-
-        // Aggiungiamo una nota generica per i prompt che richiedono allegati/contesto esterno
-        // se contengono [DETTAGLI] o [AREA_TEXT] (che spesso implica un testo da allegare)
-        if (promptTemplate.includes("[AREA_TEXT]") || promptTemplate.includes("[DETTAGLI]")) {
-            const note = document.createElement("p");
-            note.className = "note";
-            note.textContent = "Ricorda: Per questo prompt, dovrai fornire il testo/file da elaborare alla tua IA di fiducia insieme al prompt generato.";
-            cardContent.appendChild(note);
-        }
-    }
-
 
     buttonGroupRow1.appendChild(generatePromptButton);
     buttonGroupRow1.appendChild(generateAIResponseButton);
@@ -323,8 +339,6 @@ export function renderCards(prompts, filterCategoria = "", searchTerm = "") {
     UI_ELEMENTS.promptContainer.innerHTML = "";
 
     const filteredPrompts = prompts.filter((row) => {
-        // Assicurati che la riga abbia almeno 6 colonne per i campi standard
-        // Ora la riga può avere fino a 8 colonne (indice 7 per labelCharacters)
         if (row.length < 6) {
             console.warn("Riga del foglio con meno di 6 colonne, saltata in fase di filtro:", row);
             return false;
